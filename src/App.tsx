@@ -34,10 +34,27 @@ function loadFromStorage(): AccountData {
 function App() {
   const [accountData, setAccountData] = useState<AccountData>(() => loadFromStorage());
   const [form, setForm] = useState(emptyPullForm);
+  const [selectedCharacterName, setSelectedCharacterName] = useState('Navia');
+  const [selectedWeaponName, setSelectedWeaponName] = useState('Primordial Jade Cutter');
+
+  const characterNames = Object.keys(accountData.characters);
+  const weaponNames = Object.keys(accountData.weapons);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(accountData));
   }, [accountData]);
+
+  useEffect(() => {
+    if (!characterNames.includes(selectedCharacterName) && characterNames.length > 0) {
+      setSelectedCharacterName(characterNames[0]);
+    }
+  }, [characterNames, selectedCharacterName]);
+
+  useEffect(() => {
+    if (!weaponNames.includes(selectedWeaponName) && weaponNames.length > 0) {
+      setSelectedWeaponName(weaponNames[0]);
+    }
+  }, [weaponNames, selectedWeaponName]);
 
   const overview = useMemo(() => buildAccountOverview(accountData), [accountData]);
 
@@ -106,18 +123,36 @@ function App() {
       })),
   ].slice(0, 5);
 
+  const selectedCharacter = accountData.characters[selectedCharacterName];
+  const selectedWeapon = accountData.weapons[selectedWeaponName];
+
+  const selectedCharacterSummary = selectedCharacter
+    ? {
+        constellations: getGoalProgress(selectedCharacter.currentConstellations, selectedCharacter.targetConstellations),
+        refinement: getGoalProgress(selectedCharacter.currentRefinement, selectedCharacter.targetRefinement),
+      }
+    : null;
+
+  const selectedWeaponSummary = selectedWeapon
+    ? getGoalProgress(selectedWeapon.currentRefinement, selectedWeapon.targetRefinement)
+    : null;
+
   const updateField = <K extends keyof typeof emptyPullForm>(field: K, value: (typeof emptyPullForm)[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
   };
 
-  const updateCharacterGoal = (characterName: string, field: 'currentConstellations' | 'targetConstellations' | 'currentRefinement' | 'targetRefinement', delta: number) => {
+  const updateCharacterGoal = (
+    characterName: string,
+    field: 'currentConstellations' | 'targetConstellations' | 'currentRefinement' | 'targetRefinement',
+    delta: number,
+  ) => {
     setAccountData((previous) => {
       const current = previous.characters[characterName];
       if (!current) {
         return previous;
       }
 
-      const next = {
+      return {
         ...previous,
         characters: {
           ...previous.characters,
@@ -127,8 +162,6 @@ function App() {
           },
         },
       };
-
-      return next;
     });
   };
 
@@ -166,6 +199,26 @@ function App() {
           [weaponName]: {
             ...current,
             [field]: Math.max(0, current[field] + delta),
+          },
+        },
+      };
+    });
+  };
+
+  const toggleWeaponFlag = (weaponName: string, field: 'owned') => {
+    setAccountData((previous) => {
+      const current = previous.weapons[weaponName];
+      if (!current) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        weapons: {
+          ...previous.weapons,
+          [weaponName]: {
+            ...current,
+            [field]: !current[field],
           },
         },
       };
@@ -407,7 +460,7 @@ function App() {
                   </div>
 
                   <div className="button-row">
-                    <button type="button" className="mini-button" onClick={() => toggleCharacterFlag(name, 'owned')}>
+                    <button type="button" className="mini-button" onClick={() => toggleWeaponFlag(name, 'owned')}>
                       {goal.owned ? 'Owned' : 'Not owned'}
                     </button>
                   </div>
@@ -511,6 +564,95 @@ function App() {
                 Save pull
               </button>
             </div>
+          </div>
+        </section>
+
+        <section className="two-column">
+          <div className="panel">
+            <div className="section-heading">
+              <h2>Character detail</h2>
+            </div>
+
+            <div className="selection-list">
+              {characterNames.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`chip ${selectedCharacterName === name ? 'chip-selected' : ''}`}
+                  onClick={() => setSelectedCharacterName(name)}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+
+            {selectedCharacter && selectedCharacterSummary && (
+              <div className="detail-card">
+                <div className="detail-header">
+                  <strong>{selectedCharacterName}</strong>
+                  <span>{selectedCharacter.owned ? 'Owned' : 'Missing'}</span>
+                </div>
+                <div className="detail-grid">
+                  <div>
+                    <label>Constellations</label>
+                    <strong>
+                      {selectedCharacter.currentConstellations}/{selectedCharacter.targetConstellations}
+                    </strong>
+                    <div className="mini-progress">
+                      <span style={{ width: `${selectedCharacterSummary.constellations.percent}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label>Refinement</label>
+                    <strong>
+                      {selectedCharacter.currentRefinement}/{selectedCharacter.targetRefinement}
+                    </strong>
+                    <div className="mini-progress">
+                      <span style={{ width: `${selectedCharacterSummary.refinement.percent}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="panel">
+            <div className="section-heading">
+              <h2>Weapon detail</h2>
+            </div>
+
+            <div className="selection-list">
+              {weaponNames.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`chip ${selectedWeaponName === name ? 'chip-selected' : ''}`}
+                  onClick={() => setSelectedWeaponName(name)}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+
+            {selectedWeapon && selectedWeaponSummary && (
+              <div className="detail-card">
+                <div className="detail-header">
+                  <strong>{selectedWeaponName}</strong>
+                  <span>{selectedWeapon.owned ? 'Owned' : 'Missing'}</span>
+                </div>
+                <div className="detail-grid">
+                  <div>
+                    <label>Refinement</label>
+                    <strong>
+                      {selectedWeapon.currentRefinement}/{selectedWeapon.targetRefinement}
+                    </strong>
+                    <div className="mini-progress">
+                      <span style={{ width: `${selectedWeaponSummary.percent}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
