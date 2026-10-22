@@ -54,6 +54,18 @@ function App() {
 
   const recentPulls = allPulls.slice(0, 8);
 
+  const bannerBreakdown = bannerOptions.map((banner) => {
+    const pulls = accountData.pulls[banner];
+    const summary = summarizePulls(pulls);
+    return {
+      banner,
+      pulls: summary.totalPulls,
+      fiveStars: summary.fiveStars,
+      winRate: summary.winRate,
+      averagePity: summary.averagePity,
+    };
+  });
+
   const characterGoals = Object.entries(accountData.characters).map(([name, goal]) => {
     const constellations = getGoalProgress(goal.currentConstellations, goal.targetConstellations);
     const refinement = getGoalProgress(goal.currentRefinement, goal.targetRefinement);
@@ -78,6 +90,21 @@ function App() {
       completed: goal.currentRefinement >= goal.targetRefinement,
     };
   });
+
+  const remainingObjectives = [
+    ...characterGoals
+      .filter(({ completed }) => !completed)
+      .map(({ name, constellations, refinement }) => ({
+        label: `${name}`,
+        detail: `C${constellations.current}/${constellations.target} • R${refinement.current}/${refinement.target}`,
+      })),
+    ...weaponGoals
+      .filter(({ completed }) => !completed)
+      .map(({ name, refinement }) => ({
+        label: `${name}`,
+        detail: `R${refinement.current}/${refinement.target}`,
+      })),
+  ].slice(0, 5);
 
   const updateField = <K extends keyof typeof emptyPullForm>(field: K, value: (typeof emptyPullForm)[K]) => {
     setForm((previous) => ({ ...previous, [field]: value }));
@@ -186,6 +213,35 @@ function App() {
           </div>
         </section>
 
+        <section className="panel">
+          <div className="section-heading">
+            <h2>Banner breakdown</h2>
+          </div>
+
+          <div className="banner-grid">
+            {bannerBreakdown.map(({ banner, pulls, fiveStars, winRate, averagePity }) => (
+              <div key={banner} className="banner-card">
+                <div className="banner-card-header">
+                  <strong>{banner}</strong>
+                  <span>{pulls} pulls</span>
+                </div>
+                <div className="banner-metric">
+                  <label>5★</label>
+                  <strong>{fiveStars}</strong>
+                </div>
+                <div className="banner-metric">
+                  <label>Win rate</label>
+                  <strong>{(winRate * 100).toFixed(0)}%</strong>
+                </div>
+                <div className="banner-metric">
+                  <label>Avg. pity</label>
+                  <strong>{averagePity.toFixed(0)}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="two-column">
           <div className="panel">
             <div className="section-heading">
@@ -244,79 +300,100 @@ function App() {
           </div>
         </section>
 
-        <section className="panel form-panel">
-          <div className="section-heading">
-            <h2>Add a pull</h2>
+        <section className="two-column">
+          <div className="panel">
+            <div className="section-heading">
+              <h2>Remaining objectives</h2>
+            </div>
+
+            <ul className="objective-list">
+              {remainingObjectives.length === 0 ? (
+                <li className="objective-empty">Everything is complete.</li>
+              ) : (
+                remainingObjectives.map((objective) => (
+                  <li key={`${objective.label}-${objective.detail}`}>
+                    <strong>{objective.label}</strong>
+                    <span>{objective.detail}</span>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
 
-          <div className="pull-form">
-            <div className="field-row">
-              <label>
-                Banner
-                <select value={form.banner} onChange={(event) => updateField('banner', event.target.value as BannerType)}>
-                  {bannerOptions.map((banner) => (
-                    <option key={banner} value={banner}>
-                      {banner}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Item
-                <input value={form.item} onChange={(event) => updateField('item', event.target.value)} placeholder="Navia" />
-              </label>
-
-              <label>
-                Type
-                <select value={form.itemType} onChange={(event) => updateField('itemType', event.target.value as 'character' | 'weapon')}>
-                  <option value="character">Character</option>
-                  <option value="weapon">Weapon</option>
-                </select>
-              </label>
+          <div className="panel form-panel">
+            <div className="section-heading">
+              <h2>Add a pull</h2>
             </div>
 
-            <div className="field-row">
-              <label>
-                Rank
-                <input type="number" min={3} max={5} value={form.rank} onChange={(event) => updateField('rank', Number(event.target.value))} />
-              </label>
+            <div className="pull-form">
+              <div className="field-row">
+                <label>
+                  Banner
+                  <select value={form.banner} onChange={(event) => updateField('banner', event.target.value as BannerType)}>
+                    {bannerOptions.map((banner) => (
+                      <option key={banner} value={banner}>
+                        {banner}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <label>
-                Result
-                <select value={form.result} onChange={(event) => updateField('result', event.target.value as 'win' | 'lose' | 'guaranteed')}>
-                  <option value="win">Win</option>
-                  <option value="lose">Lose</option>
-                  <option value="guaranteed">Guaranteed</option>
-                </select>
-              </label>
+                <label>
+                  Item
+                  <input value={form.item} onChange={(event) => updateField('item', event.target.value)} placeholder="Navia" />
+                </label>
 
-              <label>
-                Pity
-                <input type="number" min={0} value={form.pity} onChange={(event) => updateField('pity', Number(event.target.value))} />
-              </label>
+                <label>
+                  Type
+                  <select value={form.itemType} onChange={(event) => updateField('itemType', event.target.value as 'character' | 'weapon')}>
+                    <option value="character">Character</option>
+                    <option value="weapon">Weapon</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="field-row">
+                <label>
+                  Rank
+                  <input type="number" min={3} max={5} value={form.rank} onChange={(event) => updateField('rank', Number(event.target.value))} />
+                </label>
+
+                <label>
+                  Result
+                  <select value={form.result} onChange={(event) => updateField('result', event.target.value as 'win' | 'lose' | 'guaranteed')}>
+                    <option value="win">Win</option>
+                    <option value="lose">Lose</option>
+                    <option value="guaranteed">Guaranteed</option>
+                  </select>
+                </label>
+
+                <label>
+                  Pity
+                  <input type="number" min={0} value={form.pity} onChange={(event) => updateField('pity', Number(event.target.value))} />
+                </label>
+              </div>
+
+              <div className="field-row">
+                <label>
+                  Patch
+                  <input value={form.patch} onChange={(event) => updateField('patch', event.target.value)} />
+                </label>
+
+                <label>
+                  Region
+                  <input value={form.region} onChange={(event) => updateField('region', event.target.value)} />
+                </label>
+
+                <label>
+                  Timestamp
+                  <input type="datetime-local" value={form.timestamp.slice(0, 16)} onChange={(event) => updateField('timestamp', new Date(event.target.value).toISOString())} />
+                </label>
+              </div>
+
+              <button type="button" className="button primary submit-button" onClick={addPull}>
+                Save pull
+              </button>
             </div>
-
-            <div className="field-row">
-              <label>
-                Patch
-                <input value={form.patch} onChange={(event) => updateField('patch', event.target.value)} />
-              </label>
-
-              <label>
-                Region
-                <input value={form.region} onChange={(event) => updateField('region', event.target.value)} />
-              </label>
-
-              <label>
-                Timestamp
-                <input type="datetime-local" value={form.timestamp.slice(0, 16)} onChange={(event) => updateField('timestamp', new Date(event.target.value).toISOString())} />
-              </label>
-            </div>
-
-            <button type="button" className="button primary submit-button" onClick={addPull}>
-              Save pull
-            </button>
           </div>
         </section>
 
