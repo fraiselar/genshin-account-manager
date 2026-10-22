@@ -1,0 +1,21 @@
+import { describe, expect, it } from 'vitest';
+import { summarizePulls } from './pulls';
+
+describe('summarizePulls', () => {
+  it('returns totals and rates for a pull list', () => {
+    const pulls = [
+      { id: '1', banner: 'character', item: 'Navia', itemType: 'character', rank: 5, result: 'win', pity: 62, patch: '5.3', region: 'Mondstadt', timestamp: '2026-01-01' },
+      { id: '2', banner: 'character', item: 'Kaedehara Kazuha', itemType: 'character', rank: 4, result: 'lose', pity: 12, patch: '5.3', region: 'Mondstadt', timestamp: '2026-01-02' },
+      { id: '3', banner: 'character', item: 'Navia', itemType: 'character', rank: 5, result: 'guaranteed', pity: 73, patch: '5.3', region: 'Mondstadt', timestamp: '2026-01-04' },
+    ] as any;
+
+    const summary = summarizePulls(pulls);
+
+    expect(summary.totalPulls).toBe(3);
+    expect(summary.fiveStars).toBe(2);
+    expect(summary.fourStars).toBe(1);
+    expect(summary.guaranteed).toBe(1);
+    expect(summary.averagePity).toBeCloseTo(49, 0);
+    expect(summary.winRate).toBeCloseTo(1 / 3, 5);
+  });
+});
