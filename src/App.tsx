@@ -110,6 +110,68 @@ function App() {
     setForm((previous) => ({ ...previous, [field]: value }));
   };
 
+  const updateCharacterGoal = (characterName: string, field: 'currentConstellations' | 'targetConstellations' | 'currentRefinement' | 'targetRefinement', delta: number) => {
+    setAccountData((previous) => {
+      const current = previous.characters[characterName];
+      if (!current) {
+        return previous;
+      }
+
+      const next = {
+        ...previous,
+        characters: {
+          ...previous.characters,
+          [characterName]: {
+            ...current,
+            [field]: Math.max(0, current[field] + delta),
+          },
+        },
+      };
+
+      return next;
+    });
+  };
+
+  const toggleCharacterFlag = (characterName: string, field: 'owned' | 'hasSkin' | 'targetSkin') => {
+    setAccountData((previous) => {
+      const current = previous.characters[characterName];
+      if (!current) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        characters: {
+          ...previous.characters,
+          [characterName]: {
+            ...current,
+            [field]: !current[field],
+          },
+        },
+      };
+    });
+  };
+
+  const updateWeaponGoal = (weaponName: string, field: 'currentRefinement' | 'targetRefinement', delta: number) => {
+    setAccountData((previous) => {
+      const current = previous.weapons[weaponName];
+      if (!current) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        weapons: {
+          ...previous.weapons,
+          [weaponName]: {
+            ...current,
+            [field]: Math.max(0, current[field] + delta),
+          },
+        },
+      };
+    });
+  };
+
   const addPull = () => {
     if (!form.item.trim()) {
       return;
@@ -249,23 +311,61 @@ function App() {
             </div>
 
             <div className="progress-list">
-              {characterGoals.map(({ name, constellations, refinement, completed }) => (
+              {characterGoals.map(({ name, goal, constellations, refinement, completed }) => (
                 <div key={name} className="progress-item">
                   <div className="progress-header">
                     <strong>{name}</strong>
                     <span>{completed ? 'Complete' : 'In progress'}</span>
                   </div>
+
+                  <div className="button-row checkbox-row">
+                    <button type="button" className="mini-button" onClick={() => toggleCharacterFlag(name, 'owned')}>
+                      {goal.owned ? 'Owned' : 'Not owned'}
+                    </button>
+                    <button type="button" className="mini-button" onClick={() => toggleCharacterFlag(name, 'hasSkin')}>
+                      {goal.hasSkin ? 'Skin yes' : 'Skin no'}
+                    </button>
+                    <button type="button" className="mini-button" onClick={() => toggleCharacterFlag(name, 'targetSkin')}>
+                      {goal.targetSkin ? 'Target skin' : 'No target skin'}
+                    </button>
+                  </div>
+
                   <div className="bars">
-                    <div>
+                    <div className="goal-row">
                       <label>C{constellations.current}/{constellations.target}</label>
-                      <div className="progress-bar">
-                        <span style={{ width: `${constellations.percent}%` }} />
+                      <div className="goal-control">
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'currentConstellations', -1)}>-</button>
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'currentConstellations', 1)}>+</button>
                       </div>
                     </div>
-                    <div>
+                    <div className="progress-bar">
+                      <span style={{ width: `${constellations.percent}%` }} />
+                    </div>
+
+                    <div className="goal-row">
                       <label>R{refinement.current}/{refinement.target}</label>
-                      <div className="progress-bar">
-                        <span style={{ width: `${refinement.percent}%` }} />
+                      <div className="goal-control">
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'currentRefinement', -1)}>-</button>
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'currentRefinement', 1)}>+</button>
+                      </div>
+                    </div>
+                    <div className="progress-bar">
+                      <span style={{ width: `${refinement.percent}%` }} />
+                    </div>
+
+                    <div className="goal-row">
+                      <label>Target C</label>
+                      <div className="goal-control">
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'targetConstellations', -1)}>-</button>
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'targetConstellations', 1)}>+</button>
+                      </div>
+                    </div>
+
+                    <div className="goal-row">
+                      <label>Target R</label>
+                      <div className="goal-control">
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'targetRefinement', -1)}>-</button>
+                        <button type="button" className="mini-button" onClick={() => updateCharacterGoal(name, 'targetRefinement', 1)}>+</button>
                       </div>
                     </div>
                   </div>
@@ -280,19 +380,36 @@ function App() {
             </div>
 
             <div className="progress-list">
-              {weaponGoals.map(({ name, refinement, completed }) => (
+              {weaponGoals.map(({ name, goal, refinement, completed }) => (
                 <div key={name} className="progress-item">
                   <div className="progress-header">
                     <strong>{name}</strong>
                     <span>{completed ? 'Complete' : 'In progress'}</span>
                   </div>
-                  <div className="bars">
-                    <div>
-                      <label>R{refinement.current}/{refinement.target}</label>
-                      <div className="progress-bar">
-                        <span style={{ width: `${refinement.percent}%` }} />
-                      </div>
+
+                  <div className="goal-row">
+                    <label>R{refinement.current}/{refinement.target}</label>
+                    <div className="goal-control">
+                      <button type="button" className="mini-button" onClick={() => updateWeaponGoal(name, 'currentRefinement', -1)}>-</button>
+                      <button type="button" className="mini-button" onClick={() => updateWeaponGoal(name, 'currentRefinement', 1)}>+</button>
                     </div>
+                  </div>
+                  <div className="progress-bar">
+                    <span style={{ width: `${refinement.percent}%` }} />
+                  </div>
+
+                  <div className="goal-row" style={{ marginTop: 12 }}>
+                    <label>Target R</label>
+                    <div className="goal-control">
+                      <button type="button" className="mini-button" onClick={() => updateWeaponGoal(name, 'targetRefinement', -1)}>-</button>
+                      <button type="button" className="mini-button" onClick={() => updateWeaponGoal(name, 'targetRefinement', 1)}>+</button>
+                    </div>
+                  </div>
+
+                  <div className="button-row">
+                    <button type="button" className="mini-button" onClick={() => toggleCharacterFlag(name, 'owned')}>
+                      {goal.owned ? 'Owned' : 'Not owned'}
+                    </button>
                   </div>
                 </div>
               ))}
