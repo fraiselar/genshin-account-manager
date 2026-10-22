@@ -1,248 +1,512 @@
-import { useEffect, useMemo, useState } from 'react';
-import { buildAccountOverview, getGoalProgress, summarizePulls } from './domain/pulls';
-import { defaultAccountData } from './data/defaultAccount';
-import type { AccountData, PullEntry } from './domain/types';
+:root {
+  color-scheme: dark;
+  --bg: #0c1018;
+  --bg-soft: #141c2b;
+  --panel: #121b2a;
+  --panel-alt: #172537;
+  --border: rgba(168, 182, 210, 0.2);
+  --text: #edf4ff;
+  --muted: #b2bfd4;
+  --primary: #6aa7ff;
+  --primary-strong: #5b8fe8;
+  --success: #6fe2a5;
+  --warning: #f6d26b;
+  --danger: #ef7a7a;
+  --shadow: rgba(0, 0, 0, 0.25);
+}
 
-const STORAGE_KEY = 'genshin-account-manager:v1';
+* {
+  box-sizing: border-box;
+}
 
-function loadFromStorage(): AccountData {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) {
-      return defaultAccountData as AccountData;
-    }
-    return JSON.parse(saved) as AccountData;
-  } catch {
-    return defaultAccountData as AccountData;
+html, body, #root {
+  min-height: 100%;
+  margin: 0;
+  background: linear-gradient(180deg, #0c1018 0%, #0f1726 100%);
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+}
+
+button, input, select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 18px 64px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.8rem 1.1rem;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.button.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #06121f;
+}
+
+.button.primary:hover {
+  background: var(--primary-strong);
+}
+
+.button.secondary {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stat-card,
+.panel {
+  background: rgba(18, 27, 42, 0.9);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px var(--shadow);
+}
+
+.stat-card {
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.stat-card p,
+.stat-card span {
+  margin: 0;
+}
+
+.stat-card p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  margin-bottom: 8px;
+}
+
+.stat-card span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.panel {
+  border-radius: 20px;
+  padding: 20px 24px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mini-stat {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 12px;
+}
+
+.mini-stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  margin-bottom: 8px;
+}
+
+.mini-stat strong {
+  font-size: 1.2rem;
+}
+
+.banner-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.banner-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 12px;
+}
+
+.banner-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.banner-card-header strong {
+  text-transform: capitalize;
+}
+
+.banner-card-header span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.banner-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  color: var(--muted);
+}
+
+.banner-metric strong {
+  color: var(--text);
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.progress-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.progress-header strong {
+  font-size: 1rem;
+}
+
+.progress-header span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.checkbox-row {
+  margin-top: 4px;
+}
+
+.mini-button {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.7rem;
+}
+
+.goal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.goal-row label {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.goal-control {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progress-bar {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--success));
+}
+
+.objective-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.objective-list li {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.objective-list strong {
+  font-size: 0.95rem;
+}
+
+.objective-list span,
+.objective-empty {
+  color: var(--muted);
+}
+
+.pull-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+input, select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  color: var(--text);
+}
+
+.submit-button {
+  align-self: flex-start;
+}
+
+.selection-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.72rem;
+}
+
+.chip-selected {
+  background: rgba(106, 167, 255, 0.18);
+  border-color: rgba(106, 167, 255, 0.7);
+}
+
+.detail-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.detail-header strong {
+  font-size: 1.1rem;
+}
+
+.detail-header span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.detail-grid label {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.detail-grid strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.mini-progress {
+  width: 100%;
+  height: 10px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mini-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--success));
+  border-radius: inherit;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 10px;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+@media (max-width: 900px) {
+  .overview-grid,
+  .stats-grid,
+  .banner-grid,
+  .two-column {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
-function App() {
-  const [accountData, setAccountData] = useState<AccountData>(() => loadFromStorage());
+@media (max-width: 640px) {
+  .topbar,
+  .toolbar,
+  .overview-grid,
+  .stats-grid,
+  .banner-grid,
+  .two-column,
+  .field-row,
+  .detail-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(accountData));
-  }, [accountData]);
+  .topbar {
+    gap: 12px;
+  }
 
-  const overview = useMemo(() => buildAccountOverview(accountData), [accountData]);
-
-  const recentPulls = useMemo(() => {
-    const allPulls: PullEntry[] = [
-      ...accountData.pulls.character,
-      ...accountData.pulls.chronicled,
-      ...accountData.pulls.weapon,
-      ...accountData.pulls.standard,
-    ];
-
-    return allPulls.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)).slice(0, 8);
-  }, [accountData]);
-
-  const characterGoals = Object.entries(accountData.characters).map(([name, goal]) => {
-    const constellations = getGoalProgress(goal.currentConstellations, goal.targetConstellations);
-    const refinement = getGoalProgress(goal.currentRefinement, goal.targetRefinement);
-
-    return {
-      name,
-      goal,
-      constellations,
-      refinement,
-      completed: goal.currentConstellations >= goal.targetConstellations && goal.currentRefinement >= goal.targetRefinement,
-    };
-  });
-
-  const weaponGoals = Object.entries(accountData.weapons).map(([name, goal]) => {
-    const refinement = getGoalProgress(goal.currentRefinement, goal.targetRefinement);
-    return {
-      name,
-      goal,
-      refinement,
-      completed: goal.currentRefinement >= goal.targetRefinement,
-    };
-  });
-
-  const exportData = () => {
-    const json = JSON.stringify(accountData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'genshin-account-export.json';
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result));
-        setAccountData(parsed as AccountData);
-      } catch {
-        window.alert('The selected file could not be imported. Please choose a valid JSON export.');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
-
-  return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Personal tracker</p>
-          <h1>Genshin Account Manager</h1>
-        </div>
-        <div className="toolbar">
-          <label className="button secondary" htmlFor="import-file">
-            Import JSON
-          </label>
-          <input id="import-file" type="file" accept="application/json" onChange={importData} hidden />
-          <button className="button primary" type="button" onClick={exportData}>
-            Export JSON
-          </button>
-        </div>
-      </header>
-
-      <main className="content">
-        <section className="overview-grid">
-          <StatCard label="Primogems" value={accountData.account.primogems.toLocaleString()} detail="Current reserve" />
-          <StatCard label="Intertwined Fates" value={accountData.account.intertwinedFates.toString()} detail="Available" />
-          <StatCard label="Collection" value={`${Math.round((Object.values(accountData.characters).filter((character) => character.owned).length / Object.keys(accountData.characters).length) * 100)}%`} detail="Character progress" />
-          <StatCard label="Total pulls" value={overview.totalPulls.toString()} detail="Across all banners" />
-        </section>
-
-        <section className="panel">
-          <div className="section-heading">
-            <h2>Snapshot</h2>
-          </div>
-
-          <div className="stats-grid">
-            <MiniStat label="Character pity" value={`${accountData.account.currentPity.character}`} />
-            <MiniStat label="Weapon pity" value={`${accountData.account.currentPity.weapon}`} />
-            <MiniStat label="Standard pity" value={`${accountData.account.currentPity.standard}`} />
-            <MiniStat label="Character win rate" value={`${(summarizePulls(accountData.pulls.character).winRate * 100).toFixed(0)}%`} />
-            <MiniStat label="5★ total" value={`${overview.characterStats.fiveStars + overview.weaponStats.fiveStars}`} />
-            <MiniStat label="Average pity" value={`${overview.characterStats.averagePity.toFixed(0)}`} />
-          </div>
-        </section>
-
-        <section className="two-column">
-          <div className="panel">
-            <div className="section-heading">
-              <h2>Character goals</h2>
-            </div>
-
-            <div className="progress-list">
-              {characterGoals.map(({ name, constellations, refinement, completed }) => (
-                <div key={name} className="progress-item">
-                  <div className="progress-header">
-                    <strong>{name}</strong>
-                    <span>{completed ? 'Complete' : 'In progress'}</span>
-                  </div>
-                  <div className="bars">
-                    <div>
-                      <label>C{constellations.current}/{constellations.target}</label>
-                      <div className="progress-bar">
-                        <span style={{ width: `${constellations.percent}%` }} />
-                      </div>
-                    </div>
-                    <div>
-                      <label>R{refinement.current}/{refinement.target}</label>
-                      <div className="progress-bar">
-                        <span style={{ width: `${refinement.percent}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="panel">
-            <div className="section-heading">
-              <h2>Weapon goals</h2>
-            </div>
-
-            <div className="progress-list">
-              {weaponGoals.map(({ name, refinement, completed }) => (
-                <div key={name} className="progress-item">
-                  <div className="progress-header">
-                    <strong>{name}</strong>
-                    <span>{completed ? 'Complete' : 'In progress'}</span>
-                  </div>
-                  <div className="bars">
-                    <div>
-                      <label>R{refinement.current}/{refinement.target}</label>
-                      <div className="progress-bar">
-                        <span style={{ width: `${refinement.percent}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="section-heading">
-            <h2>Recent pulls</h2>
-          </div>
-
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Banner</th>
-                  <th>Rank</th>
-                  <th>Result</th>
-                  <th>Pity</th>
-                  <th>Patch</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentPulls.map((pull) => (
-                  <tr key={pull.id}>
-                    <td>{pull.item}</td>
-                    <td>{pull.banner}</td>
-                    <td>{pull.rank}★</td>
-                    <td>{pull.result}</td>
-                    <td>{pull.pity}</td>
-                    <td>{pull.patch}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
-
-function StatCard({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="stat-card">
-      <p>{label}</p>
-      <strong>{value}</strong>
-      <span>{detail}</span>
-    </div>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mini-stat">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-export default App;
